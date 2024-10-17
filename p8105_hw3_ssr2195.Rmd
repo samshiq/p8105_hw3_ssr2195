@@ -158,14 +158,14 @@ ggplot(ny_noaa, aes(x = tmin / 10, y = tmax / 10)) +
 # Filter snowfall values greater than 0 and less than 100
 snow_filtered <- ny_noaa |>
   filter(snow > 0 & snow < 100) |>
-  mutate(snow_mm = snow / 10)  # Convert snow to mm
+  mutate(snow_mm = snow / 10)  
 
 # Panel 2: Snowfall distribution by year (Boxplot)
 ggplot(snow_filtered, aes(x = factor(year), y = snow_mm)) +
   geom_boxplot(fill = "lightblue") +
   labs(title = "Distribution of Snowfall (0 < Snow < 100mm) by Year", x = "Year", y = "Snowfall (mm)") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels for clarity
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
 
 ```
@@ -236,11 +236,11 @@ kable(sex_education_table, caption = "Number of Men and Women in Each Education 
 
 #make grouped bar plot of education grouped by sex
 ggplot(nhanes_merged, aes(x = education, fill = sex)) +
-  geom_bar(position = "dodge") +  # 'dodge' creates side-by-side bars for each gender
+  geom_bar(position = "dodge") +
   labs(title = "Age Distribution by Education and Sex",
        x = "Education Category",
        y = "Count",
-       fill = "Sex") +  # Legend label
+       fill = "Sex") +
   theme_minimal()
 ```
 The number of men and women appear to be relatively balanced across all four education categories. While gender differences do not appear to be an issue, there seems to be a higher proportion of participants at the master's level, which could bias the results.
@@ -276,8 +276,8 @@ average_activity <- nhanes_long %>%
 
 #plot activity time courses
 ggplot(average_activity, aes(x = minute, y = avg_activity, color = sex)) +
-  geom_line() +  # Original line plot
-  geom_smooth(se = FALSE, color = "black", size = 0.5) +  # Smooth trend in black and thinner
+  geom_line() +  
+  geom_smooth(se = FALSE, color = "black", size = 0.5) +
   facet_wrap(~education) +
   labs(title = "24-Hour Activity Time Course by Education Level and Sex",
        x = "Minute of Day",
