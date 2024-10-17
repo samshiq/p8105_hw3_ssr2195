@@ -290,3 +290,169 @@ ggplot(average_activity, aes(x = minute, y = avg_activity, color = sex)) +
 
 The graph suggests that those with a high school diploma as their highest education level are the most active overall for males and females around mid-day Those with bachelors and masters degrees seem to have a bimodal activity pattern around mid-day, while those with a high school diploma see a steady decrease in activity from noon onwards. The graph seems to suggest that rising and sleeping times are relatively similar accross education levels, based on where the peaks begin and end. In all three groups, females appear to be more active than males. Overall, it seems like gender is a smaller factor in determining activity throughout the day than is level of education. 
 
+## Problem 3
+```{r import_merge_citibike_dta}
+file_names <- c("Jan 2024 Citi.csv",
+                "Jan 2020 Citi.csv",
+                "July 2020 Citi.csv",
+                "July 2024 Citi.csv")
+
+load_and_add_month <- function(file_name) {
+  month_year <- gsub(" Citi.csv", "", file_name)
+  df <- read_csv(file_name)
+  df <- df %>% mutate(month = month_year)
+  return(df)
+}
+
+citi_merged <- lapply(file_names, load_and_add_month) %>%
+  bind_rows()
+
+file_names <- c("Jan 2024 Citi.csv",
+                "Jan 2020 Citi.csv",
+                "July 2020 Citi.csv",
+                "July 2024 Citi.csv")
+
+load_and_add_month <- function(file_name) {
+  month_year <- gsub(" Citi.csv", "", file_name)
+  df <- read_csv(file_name)
+  df <- df %>% mutate(month = month_year)
+  return(df)
+}
+
+citi_merged <- lapply(file_names, load_and_add_month) %>%
+  bind_rows()
+
+num_rows <- nrow(citi_merged)
+num_columns <- ncol(citi_merged)
+
+incomplete_rides <- citi_merged %>%
+  filter(is.na(start_station_name) | is.na(end_station_name)) %>%
+  nrow()
+
+mean_ride_time <- mean(citi_merged$duration, na.rm = TRUE)
+
+common_start_station <- citi_merged %>%
+  filter(!is.na(start_station_name)) %>%
+  count(start_station_name, sort = TRUE) %>%
+  top_n(1, wt = n) %>%
+  pull(start_station_name)
+
+common_end_station <- citi_merged %>%
+  filter(!is.na(end_station_name)) %>%
+  count(end_station_name, sort = TRUE) %>%
+  top_n(1, wt = n) %>%
+  pull(end_station_name)
+```
+
+The combined Citibike dataset has `r nrow(citi_merged)` rows and `r ncol(citi_merged)` columns. Key columns include ride ID, type of rideable vehicle, day of the week, duration of ride, start and end stations, and whether the rider was a member. There are `r citi_merged %>% filter(is.na(start_station_name) | is.na(end_station_name)) %>% nrow()` rides with incomplete data missing for start and/or end station. The mean ride time is `r round(mean(citi_merged$duration, na.rm = TRUE), 2)` minutes, and the most common start and end stations are `r citi_merged %>% filter(!is.na(start_station_name)) %>% count(start_station_name, sort = TRUE) %>% top_n(1, wt = n) %>% pull(start_station_name)` and `r citi_merged %>% filter(!is.na(end_station_name)) %>% count(end_station_name, sort = TRUE) %>% top_n(1, wt = n) %>% pull(end_station_name)` respectively.
+
+
+```{r total_rides_table}
+citi_merged <- citi_merged %>%
+  mutate(month = factor(month, levels = c("Jan 2020", "July 2020", "Jan 2024", "July 2024")))
+
+summary_table <- citi_merged %>%
+  group_by(month, member_casual) %>%
+  summarise(total_rides = n()) %>%
+  spread(member_casual, total_rides) %>%
+  arrange(month)
+
+kable(summary_table, col.names = c("Month-Year", "Casual Rides", "Member Rides"), 
+      caption = "Total Rides by Month-Year for Casual and Member Riders")
+```
+
+For every month-year, there were significantly more rides by members than rides from non-members. January 2020 had the lowest ridership for members and casual riders, and January in both years seems to have less overall riders than in July of both years. It is likely that warmer summer weather increases ridership.  
+
+```{r most_pop_start_jul_2024}
+popular_stations_july_2024 <- citi_merged %>%
+  filter(month == "July 2024") %>%
+  group_by(start_station_name) %>%
+  summarise(total_rides = n()) %>%
+  arrange(desc(total_rides)) %>%
+  top_n(5, wt = total_rides)
+
+kable(popular_stations_july_2024, col.names = c("Starting Station", "Total Rides"), 
+      caption = "Top 5 Starting Stations in July 2024 by Number of Rides")
+```
+
+
+```{r median_duration}
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+
+weekday_order <- c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+
+median_duration_weekday <- citi_merged %>%
+  group_by(weekdays) %>%
+  summarise(median_duration = median(duration, na.rm = TRUE)) %>%
+  mutate(weekdays = factor(weekdays, levels = weekday_order))
+
+citi_merged <- citi_merged %>%
+  mutate(month_only = ifelse(grepl("Jan", month), "January", "July"))
+
+median_duration_month <- citi_merged %>%
+  group_by(month_only) %>%
+  summarise(median_duration = median(duration, na.rm = TRUE))
+
+citi_merged <- citi_merged %>%
+  mutate(year_only = ifelse(grepl("2020", month), "2020", "2024"))
+
+median_duration_year <- citi_merged %>%
+  group_by(year_only) %>%
+  summarise(median_duration = median(duration, na.rm = TRUE))
+
+y_axis_limit <- c(0, 13)  
+
+p1 <- ggplot(median_duration_weekday, aes(x = weekdays, y = median_duration)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.6) +
+  labs(x = "Day of the Week",
+       y = "Median Ride Duration (minutes)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylim(y_axis_limit)
+
+p2 <- ggplot(median_duration_month, aes(x = month_only, y = median_duration)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.6) +
+  labs(x = "Month",
+       y = "Median Ride Duration (minutes)") +
+  theme_minimal() +
+  ylim(y_axis_limit)
+
+p3 <- ggplot(median_duration_year, aes(x = year_only, y = median_duration)) +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.6) +
+  labs(x = "Year",
+       y = "Median Ride Duration (minutes)") +
+  theme_minimal() +
+  ylim(y_axis_limit)
+
+combined_plot <- (p1 | p2 | p3) +
+  plot_annotation(title = "Comparison of Median Ride Duration by Weekday, Month, and Year")
+
+print(combined_plot)
+```
+
+It appears that median ride length is longest on weekends.On weekdays, median ride length seems relatively stable, with Thursday having the highest median ride duration. Median ride duration is also ~5 minutes longer in July than January. During 2020, median ride duration was ~6 minutes longer than in 2024. 
+
+
+```{r impact_month_status_bike}
+data_2024 <- citi_merged %>%
+  filter(year_only == "2024") 
+
+ggplot(data_2024, aes(x = duration, fill = rideable_type, color = rideable_type)) +
+  geom_density(alpha = 0.5) +  
+  facet_wrap(~ interaction(month, member_casual)) +  
+  labs(title = "Distribution of Ride Durations by Month, Membership, and Bike Type in 2024",
+       x = "Ride Duration (minutes)",
+       y = "Density",
+       fill = "Bike Type",
+       color = "Bike Type") +
+  theme_minimal() +
+  xlim(0, 60) 
+```
+
+
+In January 2024, casuals seemed to use e-bikes more often than they used classic bikes, especially for short rides around  minutes long. In January 2024, members seemed relatively evenly split between classic and e-bikes for most ride durations. 
+
+In July 2024, we see a similar trend where casual riders tended to use e-bikes slightly more for rides less than 10 minutes long. Unlike for January 2024 members, July 2024 members used classic bikes slightly more for rides 1-10 minutes long. 
+
