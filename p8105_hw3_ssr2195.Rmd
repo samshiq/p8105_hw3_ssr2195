@@ -243,6 +243,8 @@ ggplot(nhanes_merged, aes(x = education, fill = sex)) +
        fill = "Sex") +
   theme_minimal()
 ```
+
+
 The number of men and women appear to be relatively balanced across all four education categories. While gender differences do not appear to be an issue, there seems to be a higher proportion of participants at the master's level, which could bias the results.
 
 ```{r total_activity_scatter}
@@ -258,9 +260,11 @@ ggplot(nhanes_merged, aes(x = age, y = total_activity, color = sex)) +
        color = "Sex") +  
   theme_minimal()
 ```
+
+
 Total activity declines with age across all education levels. For those with a high school education, males start with higher activity but drop below females later in life. In contrast, females maintain higher activity levels for those with bachelor's and master's degrees. The decline in activity appears to slow as education levels increase.
 
-```{r 24_hour_time_courses}
+```{r 24_hour_time_courses, warning=FALSE}
 
 #gather minute-level data into a long format
 nhanes_long <- nhanes_merged %>%
@@ -272,7 +276,7 @@ nhanes_long <- nhanes_merged %>%
 #calculate average activity per minute by education and sex
 average_activity <- nhanes_long %>%
   group_by(education, sex, minute) %>%
-  summarise(avg_activity = mean(activity, na.rm = TRUE))
+  summarise(avg_activity = mean(activity, na.rm = TRUE), .groups = "drop")
 
 #plot activity time courses
 ggplot(average_activity, aes(x = minute, y = avg_activity, color = sex)) +
@@ -299,7 +303,7 @@ file_names <- c("Jan 2024 Citi.csv",
 
 load_and_add_month <- function(file_name) {
   month_year <- gsub(" Citi.csv", "", file_name)
-  df <- read_csv(file_name)
+  df <- read_csv(file_name,show_col_types = FALSE)
   df <- df %>% mutate(month = month_year)
   return(df)
 }
@@ -314,7 +318,7 @@ file_names <- c("Jan 2024 Citi.csv",
 
 load_and_add_month <- function(file_name) {
   month_year <- gsub(" Citi.csv", "", file_name)
-  df <- read_csv(file_name)
+  df <- read_csv(file_name,show_col_types = FALSE)
   df <- df %>% mutate(month = month_year)
   return(df)
 }
